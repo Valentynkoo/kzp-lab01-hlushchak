@@ -1,14 +1,15 @@
 # kzp-lab01-hlushchak
 
-Лабораторна робота № 1 з курсу «Кросплатформні засоби програмування».
-Варіант 8 — **«Каталог фільмів»**.
+Курс «Кросплатформні засоби програмування». Варіант 8 — **«Каталог фільмів»**.
+Репозиторій наскрізний: лабораторна № 1 — перший прототип, лабораторна № 2 —
+перебудова на власні класи (`Movie`, `YearRating`) без зміни зовнішньої поведінки.
 
 ## Призначення
 
-Консольна програма читає записи про фільми з CSV-файлу, перевіряє їх,
+Консольна програма читає записи про фільми з CSV-файла, перевіряє їх,
 обчислює чотири показники та виводить звіт у консоль і текстовий файл.
-Хибні рядки не зупиняють програму: вони пропускаються з повідомленням
-про номер рядка та причину.
+Хибні рядки не зупиняють програму: вони пропускаються з повідомленням про
+номер рядка та причину.
 
 ## Формат входу
 
@@ -19,13 +20,19 @@
 title;director;year;minutes;rating
 ```
 
-| Поле | Тип | Опис |
+## Правила валідації (інваріанти класу `Movie`)
+
+| Поле | Тип | Правило |
 |---|---|---|
-| title | String | назва фільму (не порожня) |
-| director | String | режисер (не порожній) |
-| year | int | рік випуску (≥ 0) |
-| minutes | int | тривалість у хвилинах (≥ 0) |
-| rating | double | рейтинг (≥ 0) |
+| title | String | не null і не порожня |
+| director | String | не null і не порожній |
+| year | int | більше нуля |
+| minutes | int | більше нуля |
+| rating | double | скінченне число від 0 до 10 |
+
+Перевірку виконує конструктор, тому некоректний об'єкт створити неможливо.
+Перетворення рядка CSV на об'єкт виконує статичний фабричний метод
+`Movie.fromCsv(String)`: він перевіряє структуру й типи, а конструктор — значення.
 
 ## Показники
 
@@ -34,28 +41,52 @@ title;director;year;minutes;rating
 3. Найдовший фільм (назва і тривалість)
 4. Найстаріший рік (рік і назва фільму)
 
+## Структура класів
+
+```text
+src/main/java/ua/lpnu/kzp/
+├── Main.java                  # лише запускає процес і повертає код завершення
+├── ArgumentParser.java        # розбір аргументів -> CliOptions
+├── CliOptions.java            # record: help, version, input, output
+├── ApplicationController.java # керує роботою, повертає код завершення
+├── MovieCatalogProcessor.java # список Movie -> показники -> текст звіту
+├── ProcessingResult.java      # record: підсумок обробки
+├── Movie.java                 # клас-сутність (private final, перевірка в конструкторі)
+├── YearRating.java            # record: пара «рік — рейтинг»
+└── FileReport.java            # читання/запис файлів (UTF-8, Path)
+```
+
+Потік даних: CSV-рядок → `Movie.fromCsv` → `List<Movie>` → `ProcessingResult` → звіт.
+
 ## Вимоги
 
 JDK 21. Maven Wrapper (`mvnw` / `mvnw.cmd`) входить до репозиторію, окремо
 встановлювати Maven не потрібно.
 
-## Збірка і запуск
+## Збірка та запуск
 
 ```text
 mvnw.cmd verify
 mvnw.cmd package
-java -jar target/lab01-1.0.0.jar
+java -jar target/lab01-<версія з pom.xml>.jar
 ```
 
 На macOS та Ubuntu замість `mvnw.cmd` використовуйте `./mvnw`.
+Версію продукту задано лише в `pom.xml`; у програму її підставляє Maven під час збірки.
 
 Параметри:
 
 ```text
-java -jar target/lab01-1.0.0.jar --help
-java -jar target/lab01-1.0.0.jar --version
-java -jar target/lab01-1.0.0.jar --input data/input.csv --output out/report.txt
+java -jar target/lab01-<версія>.jar --help
+java -jar target/lab01-<версія>.jar --version
+java -jar target/lab01-<версія>.jar --input data/input.csv --output out/report.txt
 ```
+
+Коди завершення: `0` — успіх, `1` — хибні аргументи, `2` — помилка читання
+вхідного файла або запису звіту.
+
+Якщо в консолі Windows замість українських літер з'являються «кракозябри»,
+виконайте перед запуском `chcp 65001`. Файл звіту завжди записується в UTF-8.
 
 ## Приклад
 
@@ -74,17 +105,5 @@ java -jar target/lab01-1.0.0.jar --input data/input.csv --output out/report.txt
 Рядок 7: від'ємне числове значення
 ```
 
-Той самий текст записується у `out/report.txt`.
-
-## Структура
-
-```text
-├── data/input.csv
-├── src/main/java/ua/lpnu/kzp/
-│   ├── Main.java                  # аргументи, потік даних
-│   ├── MovieCatalogProcessor.java # перевірка, показники, форматування
-│   ├── ProcessingResult.java      # результат обробки
-│   └── FileReport.java            # читання/запис файлів (UTF-8, Path)
-├── src/test/java/ua/lpnu/kzp/     # тести JUnit 5
-└── .github/                       # CI, шаблони Issues і PR
-```
+Той самий текст записується у `out/report.txt`. Він збігається з виводом
+лабораторної роботи № 1 (це перевіряє `BehaviorComparisonTest`).

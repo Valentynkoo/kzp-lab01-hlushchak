@@ -7,16 +7,12 @@ import java.util.Locale;
 /**
  * Обробляє записи каталогу фільмів (варіант 8).
  *
- * <p>Формат одного запису: {@code title;director;year;minutes;rating}
- * (роздільник — крапка з комою, {@code rating} — число з крапкою).</p>
- *
- * <p>Порядок обробки кожного рядка: прочитати → перевірити →
- * перетворити → включити в обчислення. Хибний рядок не змінює
- * показники, а лише додає повідомлення до списку помилок.</p>
+ * <p>Розбір і перевірку одного рядка виконує {@link Movie#fromCsv(String)},
+ * а цей клас збирає список об'єктів, обчислює показники та формує звіт.
+ * Хибний рядок не змінює показники, а лише додає повідомлення до списку
+ * помилок.</p>
  */
 public final class MovieCatalogProcessor {
-
-    private static final int FIELD_COUNT = 5;
 
     private MovieCatalogProcessor() {
     }
@@ -24,89 +20,56 @@ public final class MovieCatalogProcessor {
     /**
      * Обробляє всі рядки файла й обчислює чотири показники варіанта.
      *
+     * <p>Кожен рядок перетворюється на об'єкт {@link Movie} через
+     * {@link Movie#fromCsv(String)}. Хибний рядок додає повідомлення з
+     * номером рядка до списку помилок і не потрапляє в обчислення.</p>
+     *
      * @param lines рядки вхідного файла
      * @return агрегований результат разом зі списком помилок
      */
     public static ProcessingResult processLines(List<String> lines) {
+        List<Movie> movies = new ArrayList<>();
         List<String> errors = new ArrayList<>();
 
-        int validCount = 0;
-        double ratingSum = 0.0;
-
-        String longestFilmTitle = null;
-        int longestFilmMinutes = Integer.MIN_VALUE;
-
-        String oldestFilmTitle = null;
-        int oldestYear = Integer.MAX_VALUE;
-
         for (int index = 0; index < lines.size(); index++) {
-            int lineNumber = index + 1;
-            String line = lines.get(index);
-
-            if (line.isBlank()) {
-                errors.add("Рядок %d: порожній рядок".formatted(lineNumber));
-                continue;
-            }
-
-            // -1 зберігає порожнє останнє поле, якщо воно є.
-            String[] fields = line.split(";", -1);
-            if (fields.length != FIELD_COUNT) {
-                errors.add("Рядок %d: очікується %d полів, отримано %d"
-                        .formatted(lineNumber, FIELD_COUNT, fields.length));
-                continue;
-            }
-
-            String title = fields[0].trim();
-            String director = fields[1].trim();
-
-            if (title.isEmpty()) {
-                errors.add("Рядок %d: порожня назва фільму".formatted(lineNumber));
-                continue;
-            }
-            if (director.isEmpty()) {
-                errors.add("Рядок %d: порожнє ім'я режисера".formatted(lineNumber));
-                continue;
-            }
-
-            int year;
-            int minutes;
-            double rating;
             try {
-                // Пошкоджене числове поле кидає NumberFormatException.
-                year = Integer.parseInt(fields[2].trim());
-                minutes = Integer.parseInt(fields[3].trim());
-                rating = Double.parseDouble(fields[4].trim());
-            } catch (NumberFormatException exception) {
-                errors.add("Рядок %d: числове поле має помилковий формат".formatted(lineNumber));
-                continue;
+                movies.add(Movie.fromCsv(lines.get(index)));
+            } catch (IllegalArgumentException exception) {
+                errors.add("Рядок %d: %s".formatted(index + 1, exception.getMessage()));
             }
+        }
+        return summarize(movies, errors);
+    }
 
-            if (year < 0 || minutes < 0 || rating < 0) {
-                errors.add("Рядок %d: від'ємне числове значення".formatted(lineNumber));
-                continue;
+    /** Обчислює показники за списком об'єктів, а не за полями з індексами. */
+    private static ProcessingResult summarize(List<Movie> movies, List<String> errors) {
+        double ratingSum = 0.0;
+        Movie longest = null;
+        Movie oldest = null;
+
+        for (Movie movie : movies) {
+            ratingSum += movie.getRating();
+            // Суворе порівняння: за рівних значень лишається перший запис.
+            if (longest == null || movie.getMinutes() > longest.getMinutes()) {
+                longest = movie;
             }
-
-            // Рядок пройшов усі перевірки — включаємо його в статистику.
-            validCount++;
-            ratingSum += rating;
-
-            if (minutes > longestFilmMinutes) {
-                longestFilmMinutes = minutes;
-                longestFilmTitle = title;
-            }
-            if (year < oldestYear) {
-                oldestYear = year;
-                oldestFilmTitle = title;
+            if (oldest == null || movie.getYear() < oldest.getYear()) {
+                oldest = movie;
             }
         }
 
+        int count = movies.size();
         // Порожній набір обробляємо окремо, щоб не ділити на нуль.
-        double averageRating = validCount == 0 ? 0.0 : ratingSum / validCount;
-        int longestMinutes = validCount == 0 ? 0 : longestFilmMinutes;
-        int oldest = validCount == 0 ? 0 : oldestYear;
+        double averageRating = count == 0 ? 0.0 : ratingSum / count;
 
-        return new ProcessingResult(validCount, averageRating, longestFilmTitle,
-                longestMinutes, oldestFilmTitle, oldest, errors);
+        return new ProcessingResult(
+                count,
+                averageRating,
+                longest == null ? null : longest.getTitle(),
+                longest == null ? 0 : longest.getMinutes(),
+                oldest == null ? null : oldest.getTitle(),
+                oldest == null ? 0 : oldest.getYear(),
+                errors);
     }
 
     /**
