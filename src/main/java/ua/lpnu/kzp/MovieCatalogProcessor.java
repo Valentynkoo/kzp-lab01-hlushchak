@@ -1,8 +1,12 @@
 package ua.lpnu.kzp;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Обробляє записи каталогу фільмів (варіант 8).
@@ -69,7 +73,81 @@ public final class MovieCatalogProcessor {
                 longest == null ? 0 : longest.getMinutes(),
                 oldest == null ? null : oldest.getTitle(),
                 oldest == null ? 0 : oldest.getYear(),
-                errors);
+                errors,
+                movies);
+    }
+
+    /**
+     * Знаходить фільм із найбільшим рекомендаційним балом.
+     *
+     * <p>Метод працює зі спільним типом {@link Movie} і викликає
+     * {@link Movie#recommendationScore()}: формулу вибирає фактичний підтип.
+     * За рівних балів лишається перший фільм зі списку.</p>
+     *
+     * @param movies фільми для порівняння
+     * @return найкращий фільм або порожній {@code Optional}, якщо список порожній
+     */
+    public static Optional<Movie> bestRecommended(List<Movie> movies) {
+        Movie best = null;
+        for (Movie movie : movies) {
+            if (best == null || movie.recommendationScore() > best.recommendationScore()) {
+                best = movie;
+            }
+        }
+        return Optional.ofNullable(best);
+    }
+
+    /**
+     * Рахує фільми за видом; усі види присутні в результаті, навіть із нулем.
+     *
+     * @param movies фільми для підрахунку
+     * @return кількість фільмів за видом у порядку оголошення enum
+     */
+    public static Map<MovieKind, Integer> countByKind(List<Movie> movies) {
+        Map<MovieKind, Integer> counts = new EnumMap<>(MovieKind.class);
+        for (MovieKind kind : MovieKind.values()) {
+            counts.put(kind, 0);
+        }
+        for (Movie movie : movies) {
+            counts.merge(movie.getKind(), 1, Integer::sum);
+        }
+        return counts;
+    }
+
+    /**
+     * Формує додатковий блок «Рекомендації». Основний звіт
+     * {@link #formatReport(ProcessingResult)} не змінюється, а цей блок
+     * дописується після нього.
+     *
+     * @param result результат {@link #processLines(List)}
+     * @return текст блоку, що починається з порожнього рядка
+     */
+    public static String formatRecommendations(ProcessingResult result) {
+        StringBuilder block = new StringBuilder();
+        block.append(String.format(Locale.ROOT, "%nРекомендації%n"));
+
+        Optional<Movie> best = bestRecommended(result.movies());
+        if (best.isEmpty()) {
+            block.append(String.format(Locale.ROOT,
+                    "Найкращий за рекомендаційним балом: немає коректних даних%n"));
+        } else {
+            block.append(String.format(Locale.ROOT,
+                    "Найкращий за рекомендаційним балом: %s (%.2f)%n",
+                    best.get().getTitle(), best.get().recommendationScore()));
+        }
+
+        StringBuilder kinds = new StringBuilder();
+        for (Map.Entry<MovieKind, Integer> entry : countByKind(result.movies()).entrySet()) {
+            if (kinds.length() > 0) {
+                kinds.append(", ");
+            }
+            kinds.append(entry.getKey().label()).append(": ").append(entry.getValue());
+        }
+        block.append(String.format(Locale.ROOT, "Фільмів за видом: %s%n", kinds));
+        // HashSet скористається узгодженими equals і hashCode: дублікати не рахуються.
+        block.append(String.format(Locale.ROOT, "Унікальних фільмів: %d%n",
+                new HashSet<>(result.movies()).size()));
+        return block.toString();
     }
 
     /**

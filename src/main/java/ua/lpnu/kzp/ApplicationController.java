@@ -50,7 +50,9 @@ public final class ApplicationController {
         }
 
         ProcessingResult result = MovieCatalogProcessor.processLines(lines);
-        String report = MovieCatalogProcessor.formatReport(result);
+        // Основний звіт збігається з лабораторною № 1; блок рекомендацій дописується після нього.
+        String report = MovieCatalogProcessor.formatReport(result)
+                + MovieCatalogProcessor.formatRecommendations(result);
         System.out.print(report);
 
         try {
