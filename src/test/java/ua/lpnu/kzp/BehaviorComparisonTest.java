@@ -1,6 +1,7 @@
 package ua.lpnu.kzp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -35,5 +36,24 @@ class BehaviorComparisonTest {
         """;
         // Розділювач рядків залежить від ОС, тому нормалізуємо його.
         assertEquals(expectedLab1Output, report.replace("\r\n", "\n"));
+    }
+
+    @Test
+    void recommendationsBlockIsAppendedAfterUnchangedLab1Report() throws IOException {
+        List<String> lines = FileReport.readLines(Path.of("data", "input.csv"));
+        ProcessingResult result = MovieCatalogProcessor.processLines(lines);
+
+        String lab1Part = MovieCatalogProcessor.formatReport(result);
+        String full = lab1Part + MovieCatalogProcessor.formatRecommendations(result);
+
+        // Усі показники лабораторної № 1 лишилися на місці; нове лише дописано в кінець.
+        assertTrue(full.startsWith(lab1Part));
+        assertTrue(full.replace("\r\n", "\n").endsWith("""
+
+        Рекомендації
+        Найкращий за рекомендаційним балом: Тіні забутих предків (81.00)
+        Фільмів за видом: художній: 5, документальний: 0
+        Унікальних фільмів: 5
+        """.replace("\r\n", "\n")));
     }
 }
