@@ -81,9 +81,9 @@ Maven Wrapper, JUnit 5, SpotBugs, shade-плагін і GitHub Actions успа�
 
 **SpotBugs і виняток у конструкторі.** Перший запуск `mvnw.cmd clean verify` пройшов усі 85 тестів, але SpotBugs 4.9.7 повідомив один дефект середньої серйозності: `CT_CONSTRUCTOR_THROW` для конструктора `Movie`. Застереження стосується нефінальних класів, чий конструктор може кинути виняток: частково створений об'єкт, теоретично, можна «оживити» через фіналізатор. Рішення: застереження вимкнено лише для класу `Movie` через `spotbugs-exclude.xml`, підключений у `pom.xml`. Обґрунтування: виняток у конструкторі — це свідома перевірка інваріантів (вимога лабораторних № 2 і № 3); `Movie` абстрактний, містить лише `final`-поля незмінних типів і не тримає ресурсів; обидва підтипи `final`; фіналізатори в проєкті не використовуються (механізм застарілий). Інших правил і інших класів виключення не стосуються. Розглянуто й відхилено перенесення перевірки в статичні методи чи заборону конструктора: це розмило б єдине місце перевірки інваріантів.
 
-Результат `mvnw.cmd clean verify`: ⟦вставити після повторного запуску⟧
-CI (Ubuntu, Windows, macOS): ⟦вставити посилання на зелений запуск⟧
-JAR-артефакти: ⟦вставити назви артефактів з того самого запуску⟧
+Результат повторного `mvnw.cmd clean verify`: `Tests run: 85, Failures: 0, Errors: 0, Skipped: 0`; SpotBugs без зауважень; `BUILD SUCCESS`.
+CI (Ubuntu, Windows, macOS): усі перевірки `verify` зелені для запуску CI #10 (push, коміт `e5b4cd0`) і запуску CI #11 (pull_request) на гілці `lab03`: https://github.com/Valentynkoo/kzp-lab01-hlushchak/actions?query=branch%3Alab03 ; перевірки Pull Request: https://github.com/Valentynkoo/kzp-lab01-hlushchak/pull/20/checks
+JAR-артефакти (за схемою `jar-<ОС>-<номер запуску>`): `jar-ubuntu-latest-10`, `jar-windows-latest-10`, `jar-macos-latest-10` (запуск #10) і `jar-ubuntu-latest-11`, `jar-windows-latest-11`, `jar-macos-latest-11` (запуск #11).
 Git-тег: `v1.2.0`
 
 ## 11. GitHub Issues і Pull Request
@@ -97,7 +97,7 @@ Git-тег: `v1.2.0`
 | #18 | Тести змішаного каталогу й сумісності звіту | `MixedCatalogTest`, `BehaviorComparisonTest` |
 | #19 | README, REPORT і javadoc | перегляд Pull Request |
 
-Pull Request: ⟦вставити посилання⟧ із записами `Closes #14` … `Closes #19`.
+Pull Request #20: https://github.com/Valentynkoo/kzp-lab01-hlushchak/pull/20 із записами `Closes #14` … `Closes #19`.
 
 ## 12. Порівняння поведінки
 Для `data/input.csv` (усі рядки без поля «вид») увесь основний звіт (усі рядки до порожнього рядка перед блоком «Рекомендації») збігається з лабораторною № 1 символ у символ: це перевіряє `BehaviorComparisonTest.reportForControlInputMatchesLab1Output`. Нове — лише блок після них:
