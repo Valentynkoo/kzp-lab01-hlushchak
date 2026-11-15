@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Виключення SpotBugs з обґрунтуванням (див. REPORT.md, розділ 10).
+
+  CT_CONSTRUCTOR_THROW для Movie: конструктор базового класу навмисно кидає виняток,
+  якщо інваріант порушено. Клас абстрактний, має лише final-поля незмінних типів
+  і не тримає ресурсів, а обидва підтипи final. Фіналізатори не використовуються,
+  тож атака через фіналізатор неможлива.
+-->
+<FindBugsFilter>
+    <Match>
+        <Class name="ua.lpnu.kzp.Movie"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+</FindBugsFilter>
